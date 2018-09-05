@@ -31,23 +31,14 @@ namespace OCCCPrinting
             Console.WriteLine("Hello World!");
             /////////////////////////
 
-            PasswordPrompt form = new PasswordPrompt();
-            form.ShowDialog();
-            if(form.StudentId == "123")
-            {
-                MessageBox.Show("Nice");
-            }
-            else
-            {
-                MessageBox.Show("What!!");
-            }
+
 
             // mewPrintJobs event subscription
-            //ManagementEventWatcher startWatch = new ManagementEventWatcher(
-            //new EventQuery("SELECT * FROM    __InstanceCreationEvent WITHIN 0.1 WHERE TargetInstance ISA 'Win32_PrintJob'"));
-            //startWatch.EventArrived += new EventArrivedEventHandler(
-            //    mewPrintJobs_EventArrived);
-            //startWatch.Start();
+            ManagementEventWatcher startWatch = new ManagementEventWatcher(
+            new EventQuery("SELECT * FROM    __InstanceCreationEvent WITHIN 0.1 WHERE TargetInstance ISA 'Win32_PrintJob'"));
+            startWatch.EventArrived += new EventArrivedEventHandler(
+                mewPrintJobs_EventArrived);
+            startWatch.Start();
             /////////////////////////
 
             Console.ReadKey();
@@ -82,20 +73,27 @@ namespace OCCCPrinting
 
 
 
-            int promptValue = Prompt.ShowDialog("Test", "123");
-            Console.WriteLine("Stating the Spooler");
+            PasswordPrompt form = new PasswordPrompt();
             
+            form.ShowDialog();
+            
+            Console.WriteLine("Stating the Spooler");
             RunCommand("net start spooler");
-            RunCommand("net start spooler");
-            if (promptValue ==5)
+            if (form.StudentId == "123")
             {
                 Console.WriteLine("printing ...");
                 job.Resume();
+                MessageBox.Show("number of pages : " + job.NumberOfPages);
             }
             else
             {
                 job.Cancel();
+                MessageBox.Show("Invalid password!");
             }
+            form.Dispose();
+            
+            
+            
 
             //Console.ReadLine();
 

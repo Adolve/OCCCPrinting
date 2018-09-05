@@ -100,8 +100,10 @@
             // 
             // PasswordPrompt
             // 
+            this.AcceptButton = this.btPrint;
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.CancelButton = this.btCancel;
             this.ClientSize = new System.Drawing.Size(630, 307);
             this.Controls.Add(this.btPrint);
             this.Controls.Add(this.btCancel);
@@ -116,6 +118,7 @@
             this.Name = "PasswordPrompt";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Student Verification";
+            this.TopMost = true;
             this.ResumeLayout(false);
             this.PerformLayout();
 
