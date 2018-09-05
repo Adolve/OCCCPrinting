@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Printing;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -14,12 +16,20 @@ using OCCCPrinting.Persistence;
 
 namespace OCCCPrinting
 {
+    
     class Program
     {
+
         static void Main(string[] args)
         {
-            // add a job "Adobe PDF"
 
+            
+
+           
+
+
+            // add a job "Adobe PDF"
+            /*
             PrintServer myPrintServer = new PrintServer();
             var myPrintQueue = myPrintServer.GetPrintQueue("Adobe PDF");
 
@@ -31,28 +41,40 @@ namespace OCCCPrinting
             JavaScriptSerializer javaScriptSerializer = new JavaScriptSerializer();
             var job = javaScriptSerializer.Deserialize<PrintSystemJobInfo>(obj);
 
+            var jobTobeAdded = myPrintQueue.AddJob();
             
+            
+            long dim = job.JobSize;
+            Byte[] anotherByteBuffer = new byte[dim];
+            System.IO.Stream myStream = jobTobeAdded.JobStream;
+           int ok = job.JobStream.Read(anotherByteBuffer, 0, Convert.ToInt32(job.JobSize));
+            myStream.Write(anotherByteBuffer, 0, anotherByteBuffer.Length);
+            myStream.Close();
+            */
 
             // Access to the database
-            var db = new OCCCPrintingDbContext();
-            var printTracks = db.PrintTracks;
-            Console.WriteLine(printTracks.FirstOrDefault().StudentId);
+            //var db = new OCCCPrintingDbContext();
+            //var printTracks = db.PrintTracks;
+            //Console.WriteLine(printTracks.FirstOrDefault().StudentId);
             Console.WriteLine("Hello World!");
             /////////////////////////
-            
+
+
             // mewPrintJobs event subscription
+
+            
             ManagementEventWatcher startWatch = new ManagementEventWatcher(
                 new EventQuery("SELECT * FROM    __InstanceCreationEvent WITHIN 0.1 WHERE TargetInstance ISA 'Win32_PrintJob'"));
             startWatch.EventArrived += new EventArrivedEventHandler(
                 mewPrintJobs_EventArrived);
             startWatch.Start();
             /////////////////////////
-
+            
             Console.ReadKey();
 
         }
 
-        static  void mewPrintJobs_EventArrived(object sender, EventArrivedEventArgs e)
+        static void mewPrintJobs_EventArrived(object sender, EventArrivedEventArgs e)
         {
             ManagementBaseObject printJob = (ManagementBaseObject)e.NewEvent.Properties["TargetInstance"].Value;
 
@@ -63,27 +85,36 @@ namespace OCCCPrinting
             var myPrintQueue = myPrintServer.GetPrintQueue(printerName);
             var job = myPrintQueue.GetJob(JobId);
             job.Pause();
-            
+
+
             // Serialize
-            JavaScriptSerializer javaScriptSerializer = new JavaScriptSerializer();
-            var jobSerialize = javaScriptSerializer.Serialize(job);
+            /*
+            var jobStream = job.JobStream;
             IFormatter formatter = new BinaryFormatter();
             Stream stream = new FileStream(Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/job.bin", FileMode.Create, FileAccess.Write, FileShare.None);
-            formatter.Serialize(stream, jobSerialize);
+            formatter.Serialize(stream, jobStream);
             stream.Close();
+            */
             ///////////////////////////
-            Console.WriteLine("#pages before: "+job.NumberOfPages);
+            Console.WriteLine("#pages before: " + job.NumberOfPages);
             int i = 0;
             while (job.IsSpooling)
             {
-                job = myPrintQueue.GetJob(JobId);
+                job.Refresh();
+                //job = myPrintQueue.GetJob(JobId);
                 Console.WriteLine(i);
                 i++;
             }
-            
+
+
+
+
+
             Console.WriteLine("#pages after: " + job.NumberOfPages);
-            
-        
+            Console.ReadKey();
+
+
+            Console.WriteLine("Restarted");
 
             /*
 
@@ -122,5 +153,7 @@ namespace OCCCPrinting
             */
             Console.WriteLine("catched!");
         }
+
     }
+
 }
