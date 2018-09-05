@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using OCCCPrinting.Persistence;
+using System.Diagnostics;
 
 namespace OCCCPrinting
 {
@@ -22,36 +23,7 @@ namespace OCCCPrinting
 
         static void Main(string[] args)
         {
-
             
-
-           
-
-
-            // add a job "Adobe PDF"
-            /*
-            PrintServer myPrintServer = new PrintServer();
-            var myPrintQueue = myPrintServer.GetPrintQueue("Adobe PDF");
-
-            IFormatter formatter = new BinaryFormatter();
-            Stream stream = new FileStream(Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/job.bin", FileMode.Open, FileAccess.Read, FileShare.Read);
-            var obj = (string)formatter.Deserialize(stream);
-            stream.Close();
-
-            JavaScriptSerializer javaScriptSerializer = new JavaScriptSerializer();
-            var job = javaScriptSerializer.Deserialize<PrintSystemJobInfo>(obj);
-
-            var jobTobeAdded = myPrintQueue.AddJob();
-            
-            
-            long dim = job.JobSize;
-            Byte[] anotherByteBuffer = new byte[dim];
-            System.IO.Stream myStream = jobTobeAdded.JobStream;
-           int ok = job.JobStream.Read(anotherByteBuffer, 0, Convert.ToInt32(job.JobSize));
-            myStream.Write(anotherByteBuffer, 0, anotherByteBuffer.Length);
-            myStream.Close();
-            */
-
             // Access to the database
             //var db = new OCCCPrintingDbContext();
             //var printTracks = db.PrintTracks;
@@ -59,17 +31,25 @@ namespace OCCCPrinting
             Console.WriteLine("Hello World!");
             /////////////////////////
 
+            PasswordPrompt form = new PasswordPrompt();
+            form.ShowDialog();
+            if(form.StudentId == "123")
+            {
+                MessageBox.Show("Nice");
+            }
+            else
+            {
+                MessageBox.Show("What!!");
+            }
 
             // mewPrintJobs event subscription
-
-            
-            ManagementEventWatcher startWatch = new ManagementEventWatcher(
-                new EventQuery("SELECT * FROM    __InstanceCreationEvent WITHIN 0.1 WHERE TargetInstance ISA 'Win32_PrintJob'"));
-            startWatch.EventArrived += new EventArrivedEventHandler(
-                mewPrintJobs_EventArrived);
-            startWatch.Start();
+            //ManagementEventWatcher startWatch = new ManagementEventWatcher(
+            //new EventQuery("SELECT * FROM    __InstanceCreationEvent WITHIN 0.1 WHERE TargetInstance ISA 'Win32_PrintJob'"));
+            //startWatch.EventArrived += new EventArrivedEventHandler(
+            //    mewPrintJobs_EventArrived);
+            //startWatch.Start();
             /////////////////////////
-            
+
             Console.ReadKey();
 
         }
@@ -84,76 +64,96 @@ namespace OCCCPrinting
             PrintServer myPrintServer = new PrintServer();
             var myPrintQueue = myPrintServer.GetPrintQueue(printerName);
             var job = myPrintQueue.GetJob(JobId);
-            job.Pause();
-
-
-            // Serialize
-            /*
-            var jobStream = job.JobStream;
-            IFormatter formatter = new BinaryFormatter();
-            Stream stream = new FileStream(Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/job.bin", FileMode.Create, FileAccess.Write, FileShare.None);
-            formatter.Serialize(stream, jobStream);
-            stream.Close();
-            */
-            ///////////////////////////
-            Console.WriteLine("#pages before: " + job.NumberOfPages);
+            job.Pause();   
+            
+            
             int i = 0;
             while (job.IsSpooling)
             {
                 job.Refresh();
                 //job = myPrintQueue.GetJob(JobId);
-                Console.WriteLine(i);
+                Console.WriteLine("Wait!!");
                 i++;
             }
 
+            Console.WriteLine("Stop the Spooler");
+            RunCommand("net stop spooler");            
+            Console.WriteLine("number of pages : " + job.NumberOfPages);
 
 
 
-
-            Console.WriteLine("#pages after: " + job.NumberOfPages);
-            Console.ReadKey();
-
-
-            Console.WriteLine("Restarted");
-
-            /*
-
-            foreach (PropertyData prop in e.NewEvent.Properties)
+            int promptValue = Prompt.ShowDialog("Test", "123");
+            Console.WriteLine("Stating the Spooler");
+            
+            RunCommand("net start spooler");
+            RunCommand("net start spooler");
+            if (promptValue ==5)
             {
-                string val = prop.Value == null ? "null" : prop.Value.ToString();
+                Console.WriteLine("printing ...");
+                job.Resume();
             }
-            
-            string v = "";
-            foreach (PropertyData propp in printJob.Properties)
+            else
             {
-                string name = propp.Name;
-                string val = propp.Value == null ? "null" : propp.Value.ToString();
-                val += "\n";
-                v += name + ":" + val;
+                job.Cancel();
             }
+
+            //Console.ReadLine();
+
             
-            //System.Threading.Thread.Sleep(500);
             
-            while (!GetPrintJobsCollection(printJob.Properties["Name"].Value.ToString(),
-                Convert.ToInt32(printJob.Properties["JobId"].Value))) ;
-             
-            // Console.WriteLine(v);
-             
+            
+
+
+            
+            
+
+            
+
+            
 
             // Showing message box for the password 
-            Task.Run(() =>
-            {
-                var dialogResult = MessageBox.Show(v, "Title", MessageBoxButtons.OKCancel);
-                if (dialogResult == System.Windows.Forms.DialogResult.OK)
-                    MessageBox.Show("OK Clicked");
-                else
-                    MessageBox.Show("Cancel Clicked");
-            });
+            //Task.Run(() =>
+            //{
+            //    var dialogResult = MessageBox.Show(v, "Title", MessageBoxButtons.OKCancel);
+            //    if (dialogResult == System.Windows.Forms.DialogResult.OK)
+            //        MessageBox.Show("OK Clicked");
+            //    else
+            //        MessageBox.Show("Cancel Clicked");
+            //});
             //////////////////////////////////////// 
-            */
-            Console.WriteLine("catched!");
+            
+            Console.WriteLine("Done!");
+        }
+        public static void RunCommand(string command)
+        {
+            String temp = @"/c "+command;
+            ProcessStartInfo cmdsi = new ProcessStartInfo("cmd.exe");
+            cmdsi.Arguments = temp;
+            cmdsi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+            Process cmd = Process.Start(cmdsi);
+            cmd.WaitForExit();
         }
 
+    }
+    public static class Prompt
+    {
+        public static int ShowDialog(string text, string caption)
+        {
+            Form prompt = new Form();
+            prompt.Width = 500;
+            prompt.Height = 200;
+            
+            prompt.Text = caption;
+            Label textLabel = new Label() { Left = 50, Top = 20, Text = text };
+            NumericUpDown inputBox = new NumericUpDown() { Left = 50, Top = 50, Width = 400 };
+            Button confirmation = new Button() { Text = "Ok", Left = 350, Width = 100, Top = 70 };
+            confirmation.Click += (sender, e) => { prompt.Close(); };
+            prompt.Controls.Add(confirmation);
+            prompt.Controls.Add(textLabel);
+            prompt.Controls.Add(inputBox);
+            prompt.ShowDialog();
+            return (int)inputBox.Value;
+        }
     }
 
 }
