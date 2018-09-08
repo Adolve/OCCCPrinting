@@ -61,6 +61,14 @@
     <Compile Include="Migrations\201809051018105_InitialModel.Designer.cs">
       <DependentUpon>201809051018105_InitialModel.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201809081713322_printTrackAddComputerName.cs" />
+    <Compile Include="Migrations\201809081713322_printTrackAddComputerName.Designer.cs">
+      <DependentUpon>201809081713322_printTrackAddComputerName.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\201809081718361_printTrackAddRequiredField.cs" />
+    <Compile Include="Migrations\201809081718361_printTrackAddRequiredField.Designer.cs">
+      <DependentUpon>201809081718361_printTrackAddRequiredField.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\PrintTrack.cs" />
     <Compile Include="PasswordPrompt.cs">
@@ -93,6 +101,12 @@
   <ItemGroup>
     <EmbeddedResource Include="Migrations\201809051018105_InitialModel.resx">
       <DependentUpon>201809051018105_InitialModel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201809081713322_printTrackAddComputerName.resx">
+      <DependentUpon>201809081713322_printTrackAddComputerName.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201809081718361_printTrackAddRequiredField.resx">
+      <DependentUpon>201809081718361_printTrackAddRequiredField.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="PasswordPrompt.resx">
       <DependentUpon>PasswordPrompt.cs</DependentUpon>

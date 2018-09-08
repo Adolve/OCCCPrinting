@@ -15,23 +15,28 @@ using System.Windows.Forms;
 using OCCCPrinting.Persistence;
 using System.Diagnostics;
 using System.Threading;
+using OCCCPrinting.Models;
+using System.Data.Entity;
 
 namespace OCCCPrinting
 {
 
     class Program
     {
-
+        static private OCCCPrintingDbContext db;
         static void Main(string[] args)
         {
 
             // Access to the database
-            //var db = new OCCCPrintingDbContext();
-            //var printTracks = db.PrintTracks;
-            //Console.WriteLine(printTracks.FirstOrDefault().StudentId);
+            db = new OCCCPrintingDbContext();
+            
+            
+            
+
+
             Console.WriteLine("Hello World!");
             /////////////////////////
-            long id = 0572575; 
+            long id = 783914; 
             Console.WriteLine(Password(id));
 
 
@@ -47,20 +52,20 @@ namespace OCCCPrinting
 
         }
 
-        static void mewPrintJobs_EventArrived(object sender, EventArrivedEventArgs e)
+        static async void mewPrintJobs_EventArrived(object sender, EventArrivedEventArgs e)
         {
             
             var settings = Properties.Settings.Default;
             settings.Reload();
+
+            //Check if the program is enable
             if (!settings.IsPageLimitEnable)
             {
                 Console.WriteLine("Page Limit Disabled");
                 return;
-            }
-            
+            }            
 
             ManagementBaseObject printJob = (ManagementBaseObject)e.NewEvent.Properties["TargetInstance"].Value;
-
             string printerName = printJob.Properties["Name"].Value.ToString().Split(',')[0];
             int JobId = Convert.ToInt32(printJob.Properties["JobId"].Value);
 
@@ -75,17 +80,16 @@ namespace OCCCPrinting
                 }
             }
 
+
             PrintServer myPrintServer = new PrintServer();
             var myPrintQueue = myPrintServer.GetPrintQueue(printerName);
             var job = myPrintQueue.GetJob(JobId);
             job.Pause();
 
-
             int i = 0;
             while (job.IsSpooling)
             {
-                job.Refresh();
-                //job = myPrintQueue.GetJob(JobId);
+                job.Refresh();                
                 Console.WriteLine("Wait!!");
                 i++;
             }
@@ -94,30 +98,74 @@ namespace OCCCPrinting
             RunCommand("net stop spooler");
             Console.WriteLine("number of pages : " + job.NumberOfPages);
 
-
-
             PasswordPrompt form = new PasswordPrompt();
-
             form.ShowDialog();
 
-            Console.WriteLine("Stating the Spooler");
+            Task<PrintTrack> queryRequest = GetPrintTrack(form.StudentId);
 
-            
+            Console.WriteLine("Stating the Spooler");
             RunCommand("net start spooler");
-            if (form.StudentId == "123")
+
+            var password = Password(Convert.ToInt64(form.StudentId));
+            if (form.Password == password)
             {
+                Console.WriteLine("printing ...");                
+                var printTrack = await queryRequest;
+
+                if (printTrack != null)
+                {
+                    if(settings.PageLimit>=printTrack.PagesPrinted+job.NumberOfPages)
+                    {
+                        job.Resume();
+                        MessageBox.Show("number of pages : " + job.NumberOfPages);
+                        printTrack.PagesPrinted += job.NumberOfPages;
+                        db.SaveChanges();
+                    }
+                    else
+                    {
+                        job.Cancel();
+                        MessageBox.Show("You can only print {0} pages more for today", (settings.PageLimit- printTrack.PagesPrinted).ToString());
+                    }
+                }
+                else
+                {
+                    if (settings.PageLimit >= job.NumberOfPages)
+                    {
+                        job.Resume();
+                        MessageBox.Show("number of pages : " + job.NumberOfPages);
+                        PrintTrack newPrintTrack = new PrintTrack
+                        {
+                            StudentId = form.StudentId,
+                            Password = form.Password,
+                            PagesPrinted = job.NumberOfPages,
+                            Date = DateTime.Today,
+                            ComputerName = System.Environment.MachineName
+                        };
+                        db.PrintTracks.Add(newPrintTrack);
+                        db.SaveChanges();
+                        
+                    }
+                    else
+                    {
+                        job.Cancel();
+                        MessageBox.Show("You can only print {0} pages per day", settings.PageLimit.ToString());
+                    }
+
+                }
                 
-                Console.WriteLine("printing ...");
-                job.Resume();
-                MessageBox.Show("number of pages : " + job.NumberOfPages);
+                
             }
             else
             {
                 job.Cancel();
                 MessageBox.Show("Invalid password!");
-               
-
             }
+
+            
+
+            
+
+            
 
             form.Dispose();
 
@@ -138,6 +186,12 @@ namespace OCCCPrinting
             Console.WriteLine("Done!");
         }
 
+        public async static Task<PrintTrack> GetPrintTrack(string studentId)
+        {
+            var printTracks = db.PrintTracks;
+            PrintTrack printTrack = await printTracks.FirstOrDefaultAsync(p => p.StudentId == studentId);
+            return printTrack;
+        }
 
         public static void RunCommand(string command)
         {
