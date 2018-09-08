@@ -29,9 +29,9 @@ namespace OCCCPrinting
 
             // Access to the database
             db = new OCCCPrintingDbContext();
-            
-            
-            
+
+            Task a = RunCommand("net start spooler");
+            a.Wait();
 
 
             Console.WriteLine("Hello World!");
@@ -95,18 +95,33 @@ namespace OCCCPrinting
             }
 
             Console.WriteLine("Stop the Spooler");
-            RunCommand("net stop spooler");
+            await RunCommand("net stop spooler");
             Console.WriteLine("number of pages : " + job.NumberOfPages);
+            if (settings.PageLimit < job.NumberOfPages)
+            {
+                MessageBox.Show("You can only print " + settings.PageLimit + " pages per day", "Prompt", 
+                    MessageBoxButtons.OK, 
+                    MessageBoxIcon.Warning, 
+                    MessageBoxDefaultButton.Button1, 
+                    MessageBoxOptions.DefaultDesktopOnly);
 
+           
+
+                await RunCommand("net start spooler");
+                job.Cancel();
+                return;
+            }
             PasswordPrompt form = new PasswordPrompt();
             form.ShowDialog();
 
             Task<PrintTrack> queryRequest = GetPrintTrack(form.StudentId);
 
             Console.WriteLine("Stating the Spooler");
-            RunCommand("net start spooler");
+            await RunCommand("net start spooler");
 
-            var password = Password(Convert.ToInt64(form.StudentId));
+            long sid;
+            long.TryParse(form.StudentId, out sid);
+            var password = Password(sid);
             if (form.Password == password)
             {
                 Console.WriteLine("printing ...");                
@@ -124,7 +139,7 @@ namespace OCCCPrinting
                     else
                     {
                         job.Cancel();
-                        MessageBox.Show("You can only print {0} pages more for today", (settings.PageLimit- printTrack.PagesPrinted).ToString());
+                        MessageBox.Show("You can only print "+ (settings.PageLimit - printTrack.PagesPrinted) + " pages more for today");
                     }
                 }
                 else
@@ -144,12 +159,7 @@ namespace OCCCPrinting
                         db.PrintTracks.Add(newPrintTrack);
                         db.SaveChanges();
                         
-                    }
-                    else
-                    {
-                        job.Cancel();
-                        MessageBox.Show("You can only print {0} pages per day", settings.PageLimit.ToString());
-                    }
+                    }                    
 
                 }
                 
@@ -193,14 +203,14 @@ namespace OCCCPrinting
             return printTrack;
         }
 
-        public static void RunCommand(string command)
+        public async static Task RunCommand(string command)
         {
             String temp = @"/c " + command;
             ProcessStartInfo cmdsi = new ProcessStartInfo("cmd.exe");
             cmdsi.Arguments = temp;
             cmdsi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
             Process cmd = Process.Start(cmdsi);
-
+            
             cmd.WaitForExit();
         }
 
