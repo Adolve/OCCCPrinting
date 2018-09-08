@@ -34,5 +34,29 @@ namespace OCCCPrinting.Properties {
                 this["PageLimit"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool IsPageLimitEnable {
+            get {
+                return ((bool)(this["IsPageLimitEnable"]));
+            }
+            set {
+                this["IsPageLimitEnable"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ExcludedPrinters {
+            get {
+                return ((string)(this["ExcludedPrinters"]));
+            }
+            set {
+                this["ExcludedPrinters"] = value;
+            }
+        }
     }
 }
