@@ -20,8 +20,6 @@ namespace OCCCPrinting
         {
             InitializeComponent();
             SetForegroundWindow(Handle.ToInt32());
-
-
         }
 
         private void btPrint_Click(object sender, EventArgs e)
