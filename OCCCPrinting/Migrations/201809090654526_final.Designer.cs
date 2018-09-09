@@ -7,13 +7,13 @@ namespace OCCCPrinting.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.2.0-61023")]
-    public sealed partial class printTrackAddComputerName : IMigrationMetadata
+    public sealed partial class final : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(printTrackAddComputerName));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(final));
         
         string IMigrationMetadata.Id
         {
-            get { return "201809081713322_printTrackAddComputerName"; }
+            get { return "201809090654526_final"; }
         }
         
         string IMigrationMetadata.Source

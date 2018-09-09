@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -17,6 +18,7 @@ using System.Diagnostics;
 using System.Threading;
 using OCCCPrinting.Models;
 using System.Data.Entity;
+using System.Runtime.CompilerServices;
 
 namespace OCCCPrinting
 {
@@ -24,176 +26,180 @@ namespace OCCCPrinting
     class Program
     {
         static private OCCCPrintingDbContext db;
-        static void Main(string[] args)
+
+        static async Task Main(string[] args)
         {
 
-            // Access to the database
+            Console.WriteLine(Password(123));
+
+
+            // Initialization of the db context 
             db = new OCCCPrintingDbContext();
 
-            Task a = RunCommand("net start spooler");
-            a.Wait();
+            // Making sure that the spooler service is running
+            AsyncPump.Run(async delegate
+            {
+                await ExecuteCmd.ExecuteCommandAsync("net start spooler");
+            });
 
 
-            Console.WriteLine("Hello World!");
-            /////////////////////////
-            long id = 783914; 
-            Console.WriteLine(Password(id));
+            Console.WriteLine("The app is running!!");
 
-
-            // mewPrintJobs event subscription
+            // Start watching the printing event
             ManagementEventWatcher startWatch = new ManagementEventWatcher(
             new EventQuery("SELECT * FROM    __InstanceCreationEvent WITHIN 0.1 WHERE TargetInstance ISA 'Win32_PrintJob'"));
-            startWatch.EventArrived += new EventArrivedEventHandler(
-                mewPrintJobs_EventArrived);
+            startWatch.EventArrived += new EventArrivedEventHandler(mewPrintJobs_EventArrived);
             startWatch.Start();
-            /////////////////////////
 
-            Console.ReadKey();
+            // 
+            Thread.Sleep(999999999);
+            //Console.ReadKey();
 
         }
 
-        static async void mewPrintJobs_EventArrived(object sender, EventArrivedEventArgs e)
+        public static async void mewPrintJobs_EventArrived(object sender, EventArrivedEventArgs e)
         {
             
-            var settings = Properties.Settings.Default;
-            settings.Reload();
+                // Loading the setting file
+                var settings = Properties.Settings.Default;
+                settings.Reload();
 
-            //Check if the program is enable
-            if (!settings.IsPageLimitEnable)
-            {
-                Console.WriteLine("Page Limit Disabled");
-                return;
-            }            
-
-            ManagementBaseObject printJob = (ManagementBaseObject)e.NewEvent.Properties["TargetInstance"].Value;
-            string printerName = printJob.Properties["Name"].Value.ToString().Split(',')[0];
-            int JobId = Convert.ToInt32(printJob.Properties["JobId"].Value);
-
-            // Expluded printers 
-            string[] PrinterList = settings.ExcludedPrinters.Split(';');
-            foreach (string printer in PrinterList)
-            {
-                if (printer == printerName)
+                //Check if the program is enable
+                Console.WriteLine("Checking if the program is enable");
+                if (!settings.IsPageLimitEnable)
                 {
-                    Console.WriteLine("Printer Expluded");
+                    Console.WriteLine("Page Limit Disabled");
                     return;
                 }
-            }
 
+                // Getting the print even infos
+                Console.WriteLine("Getting the print even infos");
+                ManagementBaseObject printJob = (ManagementBaseObject)e.NewEvent.Properties["TargetInstance"].Value;
+                string printerName = printJob.Properties["Name"].Value.ToString().Split(',')[0];
+                int JobId = Convert.ToInt32(printJob.Properties["JobId"].Value);
 
-            PrintServer myPrintServer = new PrintServer();
-            var myPrintQueue = myPrintServer.GetPrintQueue(printerName);
-            var job = myPrintQueue.GetJob(JobId);
-            job.Pause();
-
-            int i = 0;
-            while (job.IsSpooling)
-            {
-                job.Refresh();                
-                Console.WriteLine("Wait!!");
-                i++;
-            }
-
-            Console.WriteLine("Stop the Spooler");
-            await RunCommand("net stop spooler");
-            Console.WriteLine("number of pages : " + job.NumberOfPages);
-            if (settings.PageLimit < job.NumberOfPages)
-            {
-                MessageBox.Show("You can only print " + settings.PageLimit + " pages per day", "Prompt", 
-                    MessageBoxButtons.OK, 
-                    MessageBoxIcon.Warning, 
-                    MessageBoxDefaultButton.Button1, 
-                    MessageBoxOptions.DefaultDesktopOnly);
-
-           
-
-                await RunCommand("net start spooler");
-                job.Cancel();
-                return;
-            }
-            PasswordPrompt form = new PasswordPrompt();
-            form.ShowDialog();
-
-            Task<PrintTrack> queryRequest = GetPrintTrack(form.StudentId);
-
-            Console.WriteLine("Stating the Spooler");
-            await RunCommand("net start spooler");
-
-            long sid;
-            long.TryParse(form.StudentId, out sid);
-            var password = Password(sid);
-            if (form.Password == password)
-            {
-                Console.WriteLine("printing ...");                
-                var printTrack = await queryRequest;
-
-                if (printTrack != null)
+                // Exclude the printers from the excluded printers list 
+                Console.WriteLine("Exclude the printers from the excluded printers list ");
+                string[] PrinterList = settings.ExcludedPrinters.Split(';');
+                foreach (string printer in PrinterList)
                 {
-                    if(settings.PageLimit>=printTrack.PagesPrinted+job.NumberOfPages)
+                    if (printer == printerName)
                     {
-                        job.Resume();
-                        MessageBox.Show("number of pages : " + job.NumberOfPages);
-                        printTrack.PagesPrinted += job.NumberOfPages;
-                        db.SaveChanges();
+                        Console.WriteLine("Printer Expluded");
+                        return;
+                    }
+                }
+
+
+                PrintServer myPrintServer = new PrintServer();
+                var myPrintQueue = myPrintServer.GetPrintQueue(printerName);
+                var job = myPrintQueue.GetJob(JobId);
+
+                job.Pause();
+
+                // Waiting for the Spooling to end
+                Console.WriteLine("Waiting for the Spooling to end...");
+                while (job.IsSpooling)
+                {
+                    job.Refresh();
+                }
+                Console.WriteLine("Spooling ended");
+
+                Console.WriteLine("Stoping the Spooler Service");
+                var StopSpoolerTask = ExecuteCmd.ExecuteCommandAsync("net stop spooler");
+
+                int numberOfPages = job.NumberOfPages;
+
+
+                Console.WriteLine("number of pages : " + numberOfPages);
+                if (settings.PageLimit < numberOfPages)
+                {
+                    MessageBox.Show("You can only print " + settings.PageLimit + " pages per day", "Prompt",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning,
+                        MessageBoxDefaultButton.Button1,
+                        MessageBoxOptions.DefaultDesktopOnly);
+                    ExecuteCmd.ExecuteCommandSync("net start spooler");
+                    job.Cancel();
+                    return;
+                }
+
+
+                PasswordPrompt form = new PasswordPrompt();
+                form.ShowDialog();
+
+                Console.WriteLine("Waiting for the spooler to stop to start it again...");
+                AsyncPump.Run(async delegate
+                {
+                    await StopSpoolerTask;
+                });
+                var StartSpoolerTask = ExecuteCmd.ExecuteCommandAsync("net start spooler");
+
+                Task<PrintTrack> queryRequest = GetPrintTrack(form.StudentId);
+
+                long sid;
+                long.TryParse(form.StudentId, out sid);
+
+                var password = Password(sid);
+                if (form.Password == password)
+                {
+                    Console.WriteLine("printing ...");
+                    PrintTrack printTrack=null ;
+                    AsyncPump.Run(async delegate
+                    {
+                        printTrack = await queryRequest;
+                        await StartSpoolerTask;
+                    });
+                    if (printTrack != null)
+                    {
+                        if (settings.PageLimit >= printTrack.PagesPrinted + numberOfPages)
+                        {
+                            job.Resume();
+                            printTrack.PagesPrinted += numberOfPages;
+                            db.SaveChanges();
+                        }
+                        else
+                        {
+                            job.Cancel();
+                            MessageBox.Show("You can only print " + (settings.PageLimit - printTrack.PagesPrinted) + " pages more for today");
+                        }
                     }
                     else
                     {
-                        job.Cancel();
-                        MessageBox.Show("You can only print "+ (settings.PageLimit - printTrack.PagesPrinted) + " pages more for today");
+                        if (settings.PageLimit >= numberOfPages)
+                        {
+                            job.Resume();
+                            MessageBox.Show("number of pages : " + numberOfPages);
+                            PrintTrack newPrintTrack = new PrintTrack
+                            {
+                                StudentId = form.StudentId,
+                                Password = form.Password,
+                                PagesPrinted = numberOfPages,
+                                Date = DateTime.Today,
+                                ComputerName = System.Environment.MachineName
+                            };
+                            db.PrintTracks.Add(newPrintTrack);
+                            db.SaveChanges();
+                        }
+
                     }
                 }
                 else
                 {
-                    if (settings.PageLimit >= job.NumberOfPages)
+                    AsyncPump.Run(async delegate
                     {
-                        job.Resume();
-                        MessageBox.Show("number of pages : " + job.NumberOfPages);
-                        PrintTrack newPrintTrack = new PrintTrack
-                        {
-                            StudentId = form.StudentId,
-                            Password = form.Password,
-                            PagesPrinted = job.NumberOfPages,
-                            Date = DateTime.Today,
-                            ComputerName = System.Environment.MachineName
-                        };
-                        db.PrintTracks.Add(newPrintTrack);
-                        db.SaveChanges();
-                        
-                    }                    
+                        await StartSpoolerTask;
+                    });
 
+                    job.Cancel();
+                    MessageBox.Show("Invalid password!");
                 }
-                
-                
-            }
-            else
-            {
-                job.Cancel();
-                MessageBox.Show("Invalid password!");
-            }
 
+                form.Dispose();
+
+                Console.WriteLine("Done!");
             
-
             
-
-            
-
-            form.Dispose();
-
-
-            //Console.ReadLine();            
-
-            // Showing message box for the password 
-            //Task.Run(() =>
-            //{
-            //    var dialogResult = MessageBox.Show(v, "Title", MessageBoxButtons.OKCancel);
-            //    if (dialogResult == System.Windows.Forms.DialogResult.OK)
-            //        MessageBox.Show("OK Clicked");
-            //    else
-            //        MessageBox.Show("Cancel Clicked");
-            //});
-            //////////////////////////////////////// 
-
-            Console.WriteLine("Done!");
         }
 
         public async static Task<PrintTrack> GetPrintTrack(string studentId)
@@ -203,16 +209,9 @@ namespace OCCCPrinting
             return printTrack;
         }
 
-        public async static Task RunCommand(string command)
-        {
-            String temp = @"/c " + command;
-            ProcessStartInfo cmdsi = new ProcessStartInfo("cmd.exe");
-            cmdsi.Arguments = temp;
-            cmdsi.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-            Process cmd = Process.Start(cmdsi);
-            
-            cmd.WaitForExit();
-        }
+
+
+
 
         public static string Password(long id)
         {
@@ -243,10 +242,6 @@ namespace OCCCPrinting
                 return (int)inputBox.Value;
             }
         }
-
-
-
-
 
     }
 }

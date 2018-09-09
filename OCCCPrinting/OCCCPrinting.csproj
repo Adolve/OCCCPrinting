@@ -11,6 +11,21 @@
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -21,6 +36,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -30,9 +46,13 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
@@ -57,17 +77,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Migrations\201809051018105_InitialModel.cs" />
-    <Compile Include="Migrations\201809051018105_InitialModel.Designer.cs">
-      <DependentUpon>201809051018105_InitialModel.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201809081713322_printTrackAddComputerName.cs" />
-    <Compile Include="Migrations\201809081713322_printTrackAddComputerName.Designer.cs">
-      <DependentUpon>201809081713322_printTrackAddComputerName.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201809081718361_printTrackAddRequiredField.cs" />
-    <Compile Include="Migrations\201809081718361_printTrackAddRequiredField.Designer.cs">
-      <DependentUpon>201809081718361_printTrackAddRequiredField.cs</DependentUpon>
+    <Compile Include="AsyncPump.cs" />
+    <Compile Include="ExecuteCmd.cs" />
+    <Compile Include="Migrations\201809090654526_final.cs" />
+    <Compile Include="Migrations\201809090654526_final.Designer.cs">
+      <DependentUpon>201809090654526_final.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\PrintTrack.cs" />
@@ -86,9 +100,12 @@
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="Settings.cs" />
+    <Compile Include="SingleThreadSynchronizationContext.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="app.manifest">
       <SubType>Designer</SubType>
     </None>
@@ -99,18 +116,24 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\201809051018105_InitialModel.resx">
-      <DependentUpon>201809051018105_InitialModel.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201809081713322_printTrackAddComputerName.resx">
-      <DependentUpon>201809081713322_printTrackAddComputerName.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201809081718361_printTrackAddRequiredField.resx">
-      <DependentUpon>201809081718361_printTrackAddRequiredField.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\201809090654526_final.resx">
+      <DependentUpon>201809090654526_final.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="PasswordPrompt.resx">
       <DependentUpon>PasswordPrompt.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.6.1">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.6.1 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

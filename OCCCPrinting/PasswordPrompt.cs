@@ -31,5 +31,19 @@ namespace OCCCPrinting
 
         [DllImport("User32.dll")]
         public static extern Int32 SetForegroundWindow(int hWnd);
+
+        
+    }
+    public static class AsyncFormExtension
+    {
+
+        public static async Task<DialogResult> ShowDialogAsync(this Form @this)
+        {
+            await Task.Yield();
+            if (@this.IsDisposed)
+                return DialogResult.OK;
+            return @this.ShowDialog();
+        }
+
     }
 }
